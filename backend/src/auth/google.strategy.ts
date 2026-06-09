@@ -9,10 +9,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const clientID = process.env.GOOGLE_CLIENT_ID || 'dummy-client-id';
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || 'dummy-client-secret';
     
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
     super({
       clientID,
       clientSecret,
-      callbackURL: 'http://localhost:3000/auth/google/callback',
+      callbackURL: `${backendUrl}/auth/google/callback`,
       scope: ['email', 'profile', 'https://www.googleapis.com/auth/gmail.readonly'],
       accessType: 'offline',
       prompt: 'consent',

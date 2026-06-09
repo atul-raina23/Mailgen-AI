@@ -42,10 +42,11 @@ export class GmailService {
     }
 
     try {
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
       const oauth2Client = new OAuth2Client(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
-        'http://localhost:3000/auth/google/callback'
+        `${backendUrl}/auth/google/callback`
       );
 
       oauth2Client.setCredentials({

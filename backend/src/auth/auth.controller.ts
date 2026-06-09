@@ -17,7 +17,8 @@ export class AuthController {
   async googleAuthRedirect(@Req() req: any, @Res() res: any) {
     const loginRes = await this.authService.login(req.user);
     // Redirect to frontend with token, refresh_token, and user details query params
-    const redirectUrl = `http://localhost:5173/auth?token=${loginRes.access_token}&refresh_token=${loginRes.refresh_token}&user=${encodeURIComponent(JSON.stringify(loginRes.user))}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const redirectUrl = `${frontendUrl}/auth?token=${loginRes.access_token}&refresh_token=${loginRes.refresh_token}&user=${encodeURIComponent(JSON.stringify(loginRes.user))}`;
     return res.redirect(redirectUrl);
   }
 
