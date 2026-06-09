@@ -7,6 +7,7 @@ export class GoogleAuthGuard extends AuthGuard('google') {
     super({
       accessType: 'offline',
       prompt: 'consent',
+      scope: ['email', 'profile', 'https://www.googleapis.com/auth/gmail.readonly'],
     });
   }
 }
