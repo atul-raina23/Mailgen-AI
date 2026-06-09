@@ -163,7 +163,12 @@ export class AuthService {
     return { success: true };
   }
 
-  async linkGoogleAccount(userId: string, accessToken: string, refreshToken: string) {
+  async linkGoogleAccount(userId: string, accessToken: string, refreshToken?: string) {
+    const updateData: any = { accessToken };
+    if (refreshToken && refreshToken !== 'dummy-refresh-token') {
+      updateData.refreshToken = refreshToken;
+    }
+
     return this.prisma.connectedAccount.upsert({
       where: {
         userId_provider: {
@@ -171,15 +176,12 @@ export class AuthService {
           provider: 'google',
         },
       },
-      update: {
-        accessToken,
-        refreshToken,
-      },
+      update: updateData,
       create: {
         userId,
         provider: 'google',
         accessToken,
-        refreshToken,
+        refreshToken: refreshToken || 'dummy-refresh-token',
       },
     });
   }

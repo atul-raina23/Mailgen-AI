@@ -27,15 +27,19 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ): Promise<any> {
     const { name, emails, photos } = profile;
+    const email = emails[0].value;
+    console.log(`[GoogleStrategy] Validate called for ${email}. AccessToken: ${!!accessToken}, RefreshToken: ${!!refreshToken}`);
+
     const user = await this.authService.validateUser(
-      emails[0].value,
+      email,
       `${name.givenName} ${name.familyName}`,
       photos[0]?.value || '',
     );
     
     // Store tokens
-    if (accessToken && refreshToken) {
-      await this.authService.linkGoogleAccount(user.id, accessToken, refreshToken);
+    if (accessToken) {
+      console.log(`[GoogleStrategy] Linking Google Account for user ${user.id}...`);
+      await this.authService.linkGoogleAccount(user.id, accessToken, refreshToken || 'dummy-refresh-token');
     }
     
     done(null, {
