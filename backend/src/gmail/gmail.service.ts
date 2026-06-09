@@ -55,58 +55,96 @@ export class GmailService {
       });
 
       const gmail = google.gmail({ version: 'v1', auth: oauth2Client as any });
-      
-      // Fetch user messages (filtered for job search terms or general query)
-      const res = await gmail.users.messages.list({
+
+      // 1. Get the user's email address
+      const profile = await gmail.users.getProfile({ userId: 'me' });
+      const userEmail = profile.data.emailAddress || '';
+      this.logger.log(`Syncing Gmail for user email: ${userEmail}`);
+
+      // 2. Fetch sent job applications
+      const sentRes = await gmail.users.messages.list({
         userId: 'me',
-        q: 'subject:(application OR interview OR assessment OR offer OR resume)',
-        maxResults: 10,
+        q: 'in:sent (subject:(application OR resume OR job OR apply OR applying OR position OR role) OR "thank you for applying" OR "application received")',
+        maxResults: 15,
       });
 
-      const messages = res.data.messages || [];
-      this.logger.log(`Found ${messages.length} email matches in Gmail.`);
+      const sentMessages = sentRes.data.messages || [];
+      this.logger.log(`Found ${sentMessages.length} sent job application emails.`);
 
-      let newEmailsCount = 0;
-      for (const msg of messages) {
-        if (!msg.id) continue;
+      // Get unique thread IDs
+      const threadIds = Array.from(new Set(sentMessages.map(m => m.threadId).filter(Boolean))) as string[];
+      this.logger.log(`Found ${threadIds.length} unique application email threads.`);
 
-        // Check duplicate
-        const existing = await this.prisma.email.findUnique({
-          where: { gmailMessageId: msg.id },
+      let processedCount = 0;
+      for (const threadId of threadIds) {
+        // Fetch all messages in this thread
+        const threadDetails = await gmail.users.threads.get({
+          userId: 'me',
+          id: threadId,
         });
-        if (existing) continue;
 
-        // Fetch full message content
+        const messages = threadDetails.data.messages || [];
+        if (messages.length === 0) continue;
+
+        // Find incoming replies (where 'from' does not contain userEmail)
+        const incomingReplies = messages.filter(msg => {
+          const headers = msg.payload?.headers || [];
+          const fromHeader = headers.find(h => h.name?.toLowerCase() === 'from')?.value || '';
+          return !fromHeader.toLowerCase().includes(userEmail.toLowerCase());
+        });
+
+        // Determine which message to process
+        let targetMsg = null;
+
+        if (incomingReplies.length > 0) {
+          // Process the latest incoming reply
+          targetMsg = incomingReplies[incomingReplies.length - 1];
+          this.logger.log(`Thread ${threadId}: Found incoming reply from ${targetMsg.payload?.headers?.find(h => h.name?.toLowerCase() === 'from')?.value}`);
+        } else {
+          // No reply yet, process the original sent message
+          targetMsg = messages[0];
+          this.logger.log(`Thread ${threadId}: No incoming replies. Processing original sent message.`);
+        }
+
+        if (!targetMsg || !targetMsg.id) continue;
+
+        // Check duplicate message processing
+        const existing = await this.prisma.email.findUnique({
+          where: { gmailMessageId: targetMsg.id },
+        });
+        if (existing) {
+          this.logger.log(`Message ${targetMsg.id} already processed. Skipping.`);
+          continue;
+        }
+
+        // Fetch full details of the target message if snippet is incomplete
         const msgDetails = await gmail.users.messages.get({
           userId: 'me',
-          id: msg.id,
+          id: targetMsg.id,
         });
 
         const headers = msgDetails.data.payload?.headers || [];
         const subject = headers.find(h => h.name?.toLowerCase() === 'subject')?.value || 'No Subject';
-        const sender = headers.find(h => h.name?.toLowerCase() === 'from')?.value || 'Unknown Sender';
-        const receivedAtHeader = headers.find(h => h.name?.toLowerCase() === 'date')?.value;
-        const receivedAt = receivedAtHeader ? new Date(receivedAtHeader) : new Date();
+        const sender = headers.find(h => h.name?.toLowerCase() === 'from')?.value || 'Unknown';
+        const dateHeader = headers.find(h => h.name?.toLowerCase() === 'date')?.value;
+        const receivedAt = dateHeader ? new Date(dateHeader) : new Date();
+        const snippet = msgDetails.data.snippet || '';
 
-        // Extract body text
-        let snippet = msgDetails.data.snippet || '';
-        let body = snippet;
-        
-        // Run LangGraph 5-Agent workflow
+        // Run the LangGraph 5-Agent workflow
         await this.langGraphWorkflowService.runWorkflow({
           userId,
           subject,
-          body,
-          gmailMessageId: msg.id,
-          gmailThreadId: msg.threadId || msg.id,
+          body: snippet,
+          gmailMessageId: targetMsg.id,
+          gmailThreadId: threadId,
           sender,
           receivedAt,
         });
 
-        newEmailsCount++;
+        processedCount++;
       }
 
-      return { success: true, count: newEmailsCount };
+      return { success: true, count: processedCount };
     } catch (error) {
       this.logger.error('Error during Gmail synchronization, executing fallback simulation instead', error);
       return this.executeSimulatedSync(userId);
