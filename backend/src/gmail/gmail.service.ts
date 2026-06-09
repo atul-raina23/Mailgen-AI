@@ -31,10 +31,16 @@ export class GmailService {
 
   async syncGmail(userId: string) {
     this.logger.log(`Starting Gmail Sync for User: ${userId}`);
+    this.logger.log(`GOOGLE_CLIENT_ID exists in process.env: ${!!process.env.GOOGLE_CLIENT_ID}`);
 
     const account = await this.prisma.connectedAccount.findUnique({
       where: { userId_provider: { userId, provider: 'google' } },
     });
+
+    this.logger.log(`ConnectedAccount found: ${!!account}`);
+    if (account) {
+      this.logger.log(`ConnectedAccount refresh token: ${account.refreshToken}`);
+    }
 
     if (!account || account.refreshToken === 'dummy-refresh-token' || !process.env.GOOGLE_CLIENT_ID) {
       this.logger.warn('No valid Google OAuth accounts linked or in mock mode. Executing Simulated Developer Sync...');
