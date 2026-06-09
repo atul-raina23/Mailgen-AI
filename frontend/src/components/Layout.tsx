@@ -71,6 +71,7 @@ export default function Layout({ children }: LayoutProps) {
       });
       // Sync in background, wait 1.5s for visual feedback
       await new Promise(r => setTimeout(r, 1500));
+      window.location.reload();
     } catch (err) {
       console.error(err);
     } finally {

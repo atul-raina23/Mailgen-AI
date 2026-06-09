@@ -56,7 +56,7 @@ export default function Dashboard() {
     const fetchData = async () => {
       try {
         const data = await apiFetch('/applications');
-        if (data && data.length > 0) {
+        if (data) {
           setApps(data.slice(0, 5));
           // Recalculate stats from live data
           const total = data.length;

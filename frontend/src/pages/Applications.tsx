@@ -145,7 +145,7 @@ export default function Applications() {
   const fetchApps = async () => {
     try {
       const data = await apiFetch('/applications');
-      if (data && data.length > 0) {
+      if (data) {
         setApps(data);
       }
     } catch (e) {
