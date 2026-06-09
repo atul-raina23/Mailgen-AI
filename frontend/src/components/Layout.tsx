@@ -14,7 +14,7 @@ import {
   User
 } from 'lucide-react';
 
-import { API_URL } from '../api/config';
+import { apiFetch } from '../api/client';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -66,11 +66,8 @@ export default function Layout({ children }: LayoutProps) {
   const handleSync = async () => {
     setIsSyncing(true);
     try {
-      const response = await fetch(`${API_URL}/gmail/sync`, {
+      await apiFetch('/gmail/sync', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
       });
       // Sync in background, wait 1.5s for visual feedback
       await new Promise(r => setTimeout(r, 1500));

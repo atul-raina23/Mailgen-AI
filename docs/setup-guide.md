@@ -153,3 +153,26 @@ npm run start:frontend
   ```bash
   docker compose down
   ```
+
+
+
+
+
+i mean what i need to  say on render for forntend deployment what i paste in ind etauls rrot src and so and in envs 
+22:30
+Here is exactly what you should fill in for the Frontend Static Site deployment screen on Render:
+
+1. Build & Deploy Settings
+Branch: main
+Root Directory: frontend (Make sure to write exactly frontend with no spaces!)
+Build Command: Replace the default with:
+bash
+npm run build
+Publish Directory: Replace the default with:
+text
+r
+2. Environment Variables
+Click Add Environment Variable (or Add from .env) and add this single variable:
+
+Key (Name): VITE_API_URL
+Value: https://your-backend-name.onrender.com (Replace this with the actual URL of your backend Render service)

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Mail, Sparkles, LogIn, UserPlus, KeyRound, User } from 'lucide-react';
 import { API_URL } from '../api/config';
+import { apiFetch } from '../api/client';
 
 type AuthMode = 'oauth' | 'login' | 'signup';
 
@@ -50,22 +51,14 @@ export default function Auth() {
     setError(null);
     setLoading(true);
 
-    const url = mode === 'login' ? `${API_URL}/auth/login` : `${API_URL}/auth/signup`;
+    const endpoint = mode === 'login' ? '/auth/login' : '/auth/signup';
     const body = mode === 'login' ? { email, password } : { email, password, name };
 
     try {
-      const response = await fetch(url, {
+      const data = await apiFetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
+        bodyData: body,
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Authentication failed. Please check credentials.');
-      }
 
       // Save tokens and profile
       localStorage.setItem('token', data.access_token);

@@ -11,6 +11,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { API_URL } from '../api/config';
+import { apiFetch } from '../api/client';
 
 export default function Settings() {
   const [isConnected, setIsConnected] = useState(false);
@@ -25,15 +26,8 @@ export default function Settings() {
     // Check connection status from backend
     const checkConnection = async () => {
       try {
-        const response = await fetch(`${API_URL}/gmail/status`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setIsConnected(data.connected);
-        }
+        const data = await apiFetch('/gmail/status');
+        setIsConnected(data.connected);
       } catch (e) {}
     };
     checkConnection();
@@ -49,15 +43,10 @@ export default function Settings() {
     if (!confirm('Are you sure you want to disconnect your Gmail account? We will stop syncing your job application emails.')) return;
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/gmail/disconnect`, {
+      await apiFetch('/gmail/disconnect', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
       });
-      if (response.ok) {
-        setIsConnected(false);
-      }
+      setIsConnected(false);
     } catch (e) {}
     setIsConnected(false);
     setLoading(false);

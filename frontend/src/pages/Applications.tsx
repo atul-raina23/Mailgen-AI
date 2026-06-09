@@ -14,7 +14,7 @@ import {
   Edit3,
   FileText
 } from 'lucide-react';
-import { API_URL } from '../api/config';
+import { apiFetch } from '../api/client';
 
 interface Application {
   id: string;
@@ -144,16 +144,9 @@ export default function Applications() {
 
   const fetchApps = async () => {
     try {
-      const response = await fetch(`${API_URL}/applications`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.length > 0) {
-          setApps(data);
-        }
+      const data = await apiFetch('/applications');
+      if (data && data.length > 0) {
+        setApps(data);
       }
     } catch (e) {
       console.log('Failed fetching live applications, fallback to mock data');
@@ -174,24 +167,14 @@ export default function Applications() {
     };
 
     try {
-      const response = await fetch(`${API_URL}/applications`, {
+      const created = await apiFetch('/applications', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(newAppObj)
+        bodyData: newAppObj
       });
-      if (response.ok) {
-        const savedApp = await response.json();
-        setApps([savedApp, ...apps]);
-      } else {
-        const fallbackId = String(apps.length + 1);
-        setApps([{ id: fallbackId, ...newAppObj }, ...apps]);
-      }
+      setApps([created, ...apps]);
     } catch (err) {
-      const fallbackId = String(apps.length + 1);
-      setApps([{ id: fallbackId, ...newAppObj }, ...apps]);
+      // Fallback local mock insertion if offline
+      setApps([{ id: String(Date.now()), ...newAppObj }, ...apps]);
     }
 
     // Reset
@@ -205,28 +188,16 @@ export default function Applications() {
 
   const handleUpdateStatus = async (appId: string, newStatusVal: string) => {
     try {
-      const response = await fetch(`${API_URL}/applications/${appId}`, {
+      const updated = await apiFetch(`/applications/${appId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ status: newStatusVal })
+        bodyData: { status: newStatusVal }
       });
-      if (response.ok) {
-        const updated = await response.json();
-        setApps(apps.map(a => a.id === appId ? { ...a, status: updated.status } : a));
-        if (selectedApp?.id === appId) {
-          setSelectedApp({ ...selectedApp, status: updated.status });
-        }
-      } else {
-        // Fallback local update
-        setApps(apps.map(a => a.id === appId ? { ...a, status: newStatusVal } : a));
-        if (selectedApp?.id === appId) {
-          setSelectedApp({ ...selectedApp, status: newStatusVal });
-        }
+      setApps(apps.map(a => a.id === appId ? { ...a, status: updated.status } : a));
+      if (selectedApp?.id === appId) {
+        setSelectedApp({ ...selectedApp, status: updated.status });
       }
     } catch (err) {
+      // Fallback local update
       setApps(apps.map(a => a.id === appId ? { ...a, status: newStatusVal } : a));
       if (selectedApp?.id === appId) {
         setSelectedApp({ ...selectedApp, status: newStatusVal });
@@ -237,11 +208,8 @@ export default function Applications() {
   const handleDelete = async (appId: string) => {
     if (!confirm('Are you sure you want to delete this application?')) return;
     try {
-      const response = await fetch(`${API_URL}/applications/${appId}`, {
+      await apiFetch(`/applications/${appId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
       });
     } catch (err) {}
     setApps(apps.filter(a => a.id !== appId));

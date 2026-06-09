@@ -38,7 +38,7 @@ const MOCK_SOURCES = [
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
 
-import { API_URL } from '../api/config';
+import { apiFetch } from '../api/client';
 
 export default function Dashboard() {
   const [apps, setApps] = useState(MOCK_APPLICATIONS);
@@ -55,31 +55,24 @@ export default function Dashboard() {
     // Fetch live apps if available
     const fetchData = async () => {
       try {
-        const response = await fetch(`${API_URL}/applications`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.length > 0) {
-            setApps(data.slice(0, 5));
-            // Recalculate stats from live data
-            const total = data.length;
-            const interviews = data.filter((a: any) => a.status === 'INTERVIEWING').length;
-            const offers = data.filter((a: any) => a.status === 'OFFERED').length;
-            const rejections = data.filter((a: any) => a.status === 'REJECTED').length;
-            const pending = data.filter((a: any) => a.status === 'APPLIED').length;
-            const assessment = data.filter((a: any) => a.status === 'ASSESSMENT').length;
-            setStats({
-              total,
-              responses: interviews + offers + rejections + assessment,
-              interviews,
-              offers,
-              rejections,
-              pending
-            });
-          }
+        const data = await apiFetch('/applications');
+        if (data && data.length > 0) {
+          setApps(data.slice(0, 5));
+          // Recalculate stats from live data
+          const total = data.length;
+          const interviews = data.filter((a: any) => a.status === 'INTERVIEWING').length;
+          const offers = data.filter((a: any) => a.status === 'OFFERED').length;
+          const rejections = data.filter((a: any) => a.status === 'REJECTED').length;
+          const pending = data.filter((a: any) => a.status === 'APPLIED').length;
+          const assessment = data.filter((a: any) => a.status === 'ASSESSMENT').length;
+          setStats({
+            total,
+            responses: interviews + offers + rejections + assessment,
+            interviews,
+            offers,
+            rejections,
+            pending
+          });
         }
       } catch (err) {
         console.log('Using mock data for preview');
