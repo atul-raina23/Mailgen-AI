@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Mail, Sparkles, LogIn, UserPlus, KeyRound, User } from 'lucide-react';
+import { API_URL } from '../api/config';
 
 type AuthMode = 'oauth' | 'login' | 'signup';
 
@@ -29,7 +30,7 @@ export default function Auth() {
 
   const handleGoogleLogin = () => {
     // Redirect to NestJS backend OAuth endpoint
-    window.location.href = 'http://localhost:3000/auth/google';
+    window.location.href = `${API_URL}/auth/google`;
   };
 
   const handleSimulateLogin = () => {
@@ -49,7 +50,7 @@ export default function Auth() {
     setError(null);
     setLoading(true);
 
-    const url = mode === 'login' ? 'http://localhost:3000/auth/login' : 'http://localhost:3000/auth/signup';
+    const url = mode === 'login' ? `${API_URL}/auth/login` : `${API_URL}/auth/signup`;
     const body = mode === 'login' ? { email, password } : { email, password, name };
 
     try {
