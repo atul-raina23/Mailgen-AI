@@ -1,0 +1,115 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ApplicationStatus {
+  APPLIED
+  ASSESSMENT
+  INTERVIEWING
+  OFFERED
+  REJECTED
+}
+
+model User {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  name              String?
+  avatar            String?
+  password          String?
+  hashedRefreshToken String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  connectedAccounts ConnectedAccount[]
+  applications      Application[]
+  insights          Insight[]
+}
+
+model ConnectedAccount {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     String   // "google"
+  accessToken  String
+  refreshToken String   // Encrypted refresh token for offline Gmail access
+  historyId    String?  // Track last synced history ID
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, provider])
+}
+
+model Application {
+  id          String            @id @default(uuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName String
+  role        String
+  source      String            // e.g. "LinkedIn", "Wellfound", "Manual"
+  status      ApplicationStatus @default(APPLIED)
+  appliedDate DateTime          @default(now())
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  emails      Email[]
+  history     StatusHistory[]
+  interviews  Interview[]
+  offers      Offer[]
+}
+
+model Email {
+  id             String       @id @default(uuid())
+  applicationId  String?
+  application    Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  gmailMessageId String       @unique
+  gmailThreadId  String
+  sender         String
+  subject        String
+  snippet        String?
+  classification String       // "APPLIED", "ASSESSMENT", "INTERVIEWING", "REJECTED", "OFFERED", "OTHER"
+  confidence     Float
+  receivedAt     DateTime
+  createdAt      DateTime     @default(now())
+}
+
+model StatusHistory {
+  id            String             @id @default(uuid())
+  applicationId String
+  application   Application        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  previousStatus ApplicationStatus?
+  newStatus     ApplicationStatus
+  createdAt     DateTime           @default(now())
+}
+
+model Interview {
+  id            String      @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  interviewDate DateTime
+  round         String      // e.g. "Technical", "HR"
+  meetingLink   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Offer {
+  id            String      @id @default(uuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  ctc           String?
+  location      String?
+  createdAt     DateTime    @default(now())
+}
+
+model Insight {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  generatedAt DateTime @default(now())
+}
